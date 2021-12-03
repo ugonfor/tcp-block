@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
 		}
 
 
-		printf("%u bytes captured\n", header->caplen);
+		//printf("%u bytes captured\n", header->caplen);
 	}
 
 	pcap_close(pcap);

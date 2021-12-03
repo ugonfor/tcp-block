@@ -1,6 +1,11 @@
-#include "header/packet.h"
+#pragma once
 
-extern uint8_t sendbuf[BUFSIZ] = {0};
+#include "header/packet.h"
+#include <string>
+
+using namespace std;
+
+extern uint8_t sendbuf[BUFSIZ];
 
 bool memdump(uint8_t* mem, uint32_t len);
 bool isTcpPacket(EI_packet* packet);

@@ -6,9 +6,12 @@
 #include <functional>
 #include <cassert>
 #include <string.h>
+#include <iostream>
 
 #include "tcp-block.h"
 using namespace std;
+
+uint8_t sendbuf[BUFSIZ] = {0};
 
 bool memdump(uint8_t* mem, uint32_t len){
 	if (0xff < len){
@@ -63,7 +66,7 @@ bool PatternCheck(Tcphdr* packet, char* pattern, uint32_t len){
 
 	// tcp data length check
 	assert( data.length() == len-packet->offset());
-
+	
 	auto it = search( data.begin(), data.end() ,boyer_moore_searcher(ptn.begin(), ptn.end()));
 	
 	// find pattern on data
@@ -79,9 +82,9 @@ bool PatternCheck(Tcphdr* packet, char* pattern, uint32_t len){
 */
 unsigned short csum(unsigned short *ptr,int nbytes) 
 {
-	register long sum;
+	long sum;
 	unsigned short oddbyte;
-	register short answer;
+	short answer;
 
 	sum=0;
 	while(nbytes>1) {
@@ -101,7 +104,6 @@ unsigned short csum(unsigned short *ptr,int nbytes)
 	return(answer);
 }
 
-uint8_t sendbuf[BUFSIZ] = {0};
 void initBlockBuf(string redirect){
 	Iphdr* iphdr = (Iphdr*) sendbuf;
 	iphdr->ip_version = 4;
@@ -133,8 +135,7 @@ void initBlockBuf(string redirect){
 }
 
 
-void forwardblock(EI_packet* packet, int sd, int32_t totlen){
-	
+void forwardblock(EI_packet* packet, int sd, uint32_t totlen){
 	// receive packet
 	uint16_t offset = sizeof(Ethhdr) + packet->Ip.offset();
 	Tcphdr* pkt_tcp = (Tcphdr*)((u_char*)packet + offset);
@@ -158,6 +159,9 @@ void forwardblock(EI_packet* packet, int sd, int32_t totlen){
 	send_tcphdr->seq = pkt_tcp->seq + totlen - pkt_tcp->offset();
 	send_tcphdr->ack = pkt_tcp->ack;
 	send_tcphdr->flags = TH_ACK | TH_RST;
+	send_tcphdr->checksum = csum((uint16_t*)send_tcphdr, send_tcphdr->offset());
 //	packet->Ip.
 
+	int res = sendto(sd, sendbuf, send_iphdr->len, 0, (struct sockaddr *)&sin, sizeof(sin));
+	if (res < 0) fprintf(stderr, "sendto failed\n");
 }
