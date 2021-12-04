@@ -83,9 +83,10 @@ int main(int argc, char* argv[]) {
 			u_char* tcp_packet = reinterpret_cast<u_char*>(ei_packet) + sizeof(Ethhdr) + ei_packet->Ip.offset();
 			// check pattern
 			if(PatternCheck(reinterpret_cast<Tcphdr*>(tcp_packet), param.pattern, header->caplen - sizeof(Ethhdr) - ei_packet->Ip.offset() )){
-				printf("OH!\n");
-				BackBlock(sd, ei_packet, header->caplen, &param);
-				ForwardBlock(sd, ei_packet, header->caplen, &param);
+				//BackBlock(sd, ei_packet, header->caplen, &param);
+				//ForwardBlock(sd, ei_packet, header->caplen, &param);
+				BackBlock_pcap(pcap, ei_packet, header->caplen, &param);
+				ForwardBlock_pcap(pcap, ei_packet, header->caplen, &param);
 				printf("%u bytes captured\n", header->caplen);
 			}
 		}

@@ -32,7 +32,7 @@ B.flags = FIN, PSH, ACK
 B.Window Size = 0
 B.Checksum = Calc
 B.Urgent Pointer = 0
-B.payload = "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n" (Length : 55)
+B.payload = "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n\r\n" (Length : 57)
 
 
 
