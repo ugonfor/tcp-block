@@ -1,0 +1,35 @@
+Block Backward:
+B. : Backward
+O. : Original
+
+1. Ethernet
+B.Dmac = O.Smac
+B.Smac = O.Dmac
+B.Type = O.Type
+
+2. Ip
+B.vertion = 4
+B.IHL = 5
+B.ToS = 0
+B.Total Length =  B.Total Packet Length - EthHdr
+B.ID = Nonce
+B.Flags = 0
+B.Fragment offset = 0
+B.TTL = 255
+B.Protocol = TCP(6)
+B.checksum = (Check Sum Calc)
+B.Sip = O.Dip
+B.Dip = O.Sip
+
+3. TCP
+B.sport = O.dport
+B.dport = O.sport
+B.Seq Num = O.Ack Num
+B.Ack Num = O.Seq + O.Tcp payload length
+B.offset(header length) = 5(20)
+B.Reserved = 0
+B.flags = FIN, PSH, ACK
+B.Window Size = 0
+B.Checksum = Calc
+B.Urgent Pointer = 0
+B.payload = "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n" (Length : 55)
