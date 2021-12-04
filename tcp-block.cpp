@@ -395,7 +395,7 @@ void BackBlock(int sd, EI_packet* O_ei_packet, int len, Param* param){
 	ei_pkt->Ip.ip_version = 4;
 	ei_pkt->Ip.ip_ihl = 5;
 	ei_pkt->Ip.tos = 0;
-	ei_pkt->Ip.len = htons(sizeof(Iphdr) + sizeof(Tcphdr) + 55); // 55 : tcp payload length
+	ei_pkt->Ip.len = htons(sizeof(Iphdr) + sizeof(Tcphdr) + 57); // 57 : tcp payload length
 	ei_pkt->Ip.id = htons(0xdead);
 	ei_pkt->Ip.flags_fragment_offset = 0;
 	ei_pkt->Ip.ttl = 255;
@@ -417,7 +417,7 @@ void BackBlock(int sd, EI_packet* O_ei_packet, int len, Param* param){
 	B.Window Size = 0
 	B.Checksum = Calc
 	B.Urgent Pointer = 0
-	B.payload = "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n" (Length : 55)
+	B.payload = "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n\r\n" (Length : 57)
 	*/
 
 	Tcphdr* Tcp_pkt = (Tcphdr*)(BackPkt + sizeof(EI_packet));
@@ -442,13 +442,13 @@ void BackBlock(int sd, EI_packet* O_ei_packet, int len, Param* param){
 	psh.destIP = ei_pkt->Ip.dip;
 	psh.protocol = ei_pkt->Ip.protocol;
 	psh.reserved = 0;
-	psh.TCPLen = htons(sizeof(Tcphdr) + 55);
+	psh.TCPLen = htons(sizeof(Tcphdr) + 57);
 	
-	string payload = "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n";
+	string payload = "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n\r\n";
 	memcpy(BackPkt + sizeof(EI_packet) + sizeof(Tcphdr), payload.c_str(), payload.length());
 	
 	uint16_t psh_csum = csum((uint16_t*) &psh, sizeof(Pseudoheader));
-	uint16_t temp_tcp_csum = csum((uint16_t*) Tcp_pkt, sizeof(Tcphdr) + 55);
+	uint16_t temp_tcp_csum = csum((uint16_t*) Tcp_pkt, sizeof(Tcphdr) + 57);
     
 	uint32_t tcp_csum = psh_csum + temp_tcp_csum;
 	if(tcp_csum & 0x10000)
@@ -458,7 +458,7 @@ void BackBlock(int sd, EI_packet* O_ei_packet, int len, Param* param){
 	Tcp_pkt->checksum = htons(~tcp_csum); // Tcp Checksum
 	
 
-    int res = write(sd,BackPkt,sizeof(Ethhdr) + sizeof(Iphdr) + sizeof(Tcphdr) + 55);
+    int res = write(sd,BackPkt,sizeof(Ethhdr) + sizeof(Iphdr) + sizeof(Tcphdr) + 57);
     if (res < 0) {
        perror("socket write\n");
        exit(1);
@@ -499,7 +499,7 @@ void ForwardBlock(int sd, EI_packet* O_ei_packet, int len, Param* param){
 	ei_pkt->Ip.ip_version = 4;
 	ei_pkt->Ip.ip_ihl = 5;
 	ei_pkt->Ip.tos = 0;
-	ei_pkt->Ip.len = htons(sizeof(Iphdr) + sizeof(Tcphdr)); // 55 : tcp payload length
+	ei_pkt->Ip.len = htons(sizeof(Iphdr) + sizeof(Tcphdr)); // 57 : tcp payload length
 	ei_pkt->Ip.id = htons(0xbeef);
 	ei_pkt->Ip.flags_fragment_offset = 0;
 	ei_pkt->Ip.ttl = O_ei_packet->Ip.ttl;
