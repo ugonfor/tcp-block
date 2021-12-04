@@ -60,9 +60,14 @@ struct Pseudoheader{
     uint16_t TCPLen;
 };
 #pragma pack(pop)
+
+extern uint8_t MyMac[6];
+
 bool memdump(uint8_t* mem, uint32_t len);
 bool isTcpPacket(EI_packet* packet);
 bool PatternCheck(Tcphdr* packet, char* pattern, uint32_t len);
+
+void GetMyMac(char* dev);
 
 void BackBlock(int sd, EI_packet* O_ei_packet, int len, Param* param);
 void ForwardBlock(int sd, EI_packet* O_ei_packet, int len, Param* param);

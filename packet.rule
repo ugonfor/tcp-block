@@ -4,7 +4,7 @@ O. : Original
 
 1. Ethernet
 B.Dmac = O.Smac
-B.Smac = O.Dmac
+B.Smac = MyMac
 B.Type = O.Type
 
 2. Ip
@@ -42,7 +42,7 @@ O. : Original
 
 1. Ethernet
 F.Dmac = O.Dmac
-F.Smac = O.Smac
+F.Smac = MyMac
 F.Type = O.Type
 
 2. Ip

@@ -67,6 +67,7 @@ int main(int argc, char* argv[]) {
         perror("bind to device");
     }
 
+	GetMyMac(param.dev_);
 	
 	while (true) {
 		struct pcap_pkthdr* header;

@@ -19,6 +19,23 @@ using namespace std;
 uint8_t sendForward[BUFSIZ] = {0};
 uint8_t sendBackward[BUFSIZ] = {0};
 
+uint8_t MyMac[6] = {0};
+
+void GetMyMac(char* dev){
+	struct ifreq s;
+	int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+	strcpy(s.ifr_ifrn.ifrn_name, dev);
+
+	if(ioctl(fd, SIOCGIFHWADDR, &s) != 0) {
+		perror("[!] ERROR on ioctl\n");
+		exit(-1);
+	}
+	
+	memcpy(MyMac, s.ifr_hwaddr.sa_data, 6);
+	return ;
+}
+
 bool memdump(uint8_t* mem, uint32_t len){
 	if (0xff < len){
 		printf("memdump : too long length(0x%u)\n",len);
@@ -369,11 +386,11 @@ void BackBlock(int sd, EI_packet* O_ei_packet, int len, Param* param){
 	/*
 	1. Ethernet
 	B.Dmac = O.Smac
-	B.Smac = O.Dmac
+	B.Smac = MyMac
 	B.Type = O.Type
 	*/
 	memcpy(ei_pkt->Eth.dmac, O_ei_packet->Eth.smac, 6);
-	memcpy(ei_pkt->Eth.smac, O_ei_packet->Eth.dmac, 6);
+	memcpy(ei_pkt->Eth.smac, MyMac, 6);
 	ei_pkt->Eth.ether_type = O_ei_packet->Eth.ether_type;
 
 	/*
@@ -426,7 +443,7 @@ void BackBlock(int sd, EI_packet* O_ei_packet, int len, Param* param){
 	Tcp_pkt->sport_ = O_Tcp_pkt->dport_;
 	Tcp_pkt->dport_ = O_Tcp_pkt->sport_;
 	Tcp_pkt->seq = O_Tcp_pkt -> ack;
-	Tcp_pkt->ack = O_Tcp_pkt -> seq + (len - sizeof(EI_packet) - O_Tcp_pkt->offset());
+	Tcp_pkt->ack = htonl(ntohl(O_Tcp_pkt -> seq) + (len - sizeof(EI_packet) - O_Tcp_pkt->offset()));
 	Tcp_pkt->tcp_off = 5;
 	Tcp_pkt->tcp_x2 = 0;
 	Tcp_pkt->flags = TH_FIN | TH_PUSH | TH_ACK;
@@ -473,10 +490,10 @@ void ForwardBlock(int sd, EI_packet* O_ei_packet, int len, Param* param){
 	/*
 	1. Ethernet
 	F.Dmac = O.Dmac
-	F.Smac = O.Smac
+	F.Smac = MyMac
 	F.Type = O.Type
 	*/
-	memcpy(ei_pkt->Eth.smac, O_ei_packet->Eth.smac, 6);
+	memcpy(ei_pkt->Eth.smac, MyMac, 6);
 	memcpy(ei_pkt->Eth.dmac, O_ei_packet->Eth.dmac, 6);
 	ei_pkt->Eth.ether_type = O_ei_packet->Eth.ether_type;
 
@@ -529,7 +546,7 @@ void ForwardBlock(int sd, EI_packet* O_ei_packet, int len, Param* param){
 
 	Tcp_pkt->sport_ = O_Tcp_pkt->sport_;
 	Tcp_pkt->dport_ = O_Tcp_pkt->dport_;
-	Tcp_pkt->seq = O_Tcp_pkt -> seq + (len - sizeof(EI_packet) - O_Tcp_pkt->offset());
+	Tcp_pkt->seq = htonl(ntohl(O_Tcp_pkt -> seq) + (len - sizeof(EI_packet) - O_Tcp_pkt->offset()));
 	Tcp_pkt->ack = O_Tcp_pkt -> ack;
 	Tcp_pkt->tcp_off = 5;
 	Tcp_pkt->tcp_x2 = 0;
@@ -631,7 +648,7 @@ void BackBlock_pcap(pcap_t* pcap, EI_packet* O_ei_packet, int len, Param* param)
 	Tcp_pkt->sport_ = O_Tcp_pkt->dport_;
 	Tcp_pkt->dport_ = O_Tcp_pkt->sport_;
 	Tcp_pkt->seq = O_Tcp_pkt -> ack;
-	Tcp_pkt->ack = O_Tcp_pkt -> seq + (len - sizeof(EI_packet) - O_Tcp_pkt->offset());
+	Tcp_pkt->ack = htonl(ntohl(O_Tcp_pkt -> seq) + (len - sizeof(EI_packet) - O_Tcp_pkt->offset()));
 	Tcp_pkt->tcp_off = 5;
 	Tcp_pkt->tcp_x2 = 0;
 	Tcp_pkt->flags = TH_FIN | TH_PUSH | TH_ACK;
@@ -733,7 +750,7 @@ void ForwardBlock_pcap(pcap_t* pcap, EI_packet* O_ei_packet, int len, Param* par
 
 	Tcp_pkt->sport_ = O_Tcp_pkt->sport_;
 	Tcp_pkt->dport_ = O_Tcp_pkt->dport_;
-	Tcp_pkt->seq = O_Tcp_pkt -> seq + (len - sizeof(EI_packet) - O_Tcp_pkt->offset());
+	Tcp_pkt->seq = htonl(ntohl(O_Tcp_pkt -> seq) + (len - sizeof(EI_packet) - O_Tcp_pkt->offset()));
 	Tcp_pkt->ack = O_Tcp_pkt -> ack;
 	Tcp_pkt->tcp_off = 5;
 	Tcp_pkt->tcp_x2 = 0;
