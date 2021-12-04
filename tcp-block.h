@@ -65,6 +65,10 @@ bool isTcpPacket(EI_packet* packet);
 bool PatternCheck(Tcphdr* packet, char* pattern, uint32_t len);
 
 void BackBlock(int sd, EI_packet* O_ei_packet, int len, Param* param);
+void ForwardBlock(int sd, EI_packet* O_ei_packet, int len, Param* param);
+
+void BackBlock_pcap(pcap_t* pcap, EI_packet* O_ei_packet, int len, Param* param);
+void ForwardBlock_pcap(pcap_t* pcaps, EI_packet* O_ei_packet, int len, Param* param);
 
 
 

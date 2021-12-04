@@ -33,3 +33,41 @@ B.Window Size = 0
 B.Checksum = Calc
 B.Urgent Pointer = 0
 B.payload = "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n" (Length : 55)
+
+
+
+Block Forward:
+F. : Forward
+O. : Original
+
+1. Ethernet
+F.Dmac = O.Dmac
+F.Smac = O.Smac
+F.Type = O.Type
+
+2. Ip
+F.vertion = 4
+F.IHL = 5
+F.ToS = 0
+F.Total Length =  IpHdr + TcpHdr
+F.ID = Nonce
+F.Flags = 0
+F.Fragment offset = 0
+F.TTL = O.TTL
+F.Protocol = TCP(6)
+F.checksum = (Check Sum Calc)
+F.Sip = O.Sip
+F.Dip = O.Dip
+
+3. TCP
+F.sport = O.sport
+F.dport = O.dport
+F.Seq Num = O.Seq + O.Tcp payload length
+F.Ack Num = O.Ack Num
+F.offset(header length) = 5(20)
+F.Reserved = 0
+F.flags = RST, PSH, ACK
+F.Window Size = 0
+F.Checksum = Calc
+F.Urgent Pointer = 0
+

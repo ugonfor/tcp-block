@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
     memset(&ifr, 0, sizeof(ifr));
     snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), param.dev_); // device setting
     if (setsockopt(sd, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
-        perror("bind to eth1");
+        perror("bind to device");
     }
 
 	
@@ -83,7 +83,9 @@ int main(int argc, char* argv[]) {
 			u_char* tcp_packet = reinterpret_cast<u_char*>(ei_packet) + sizeof(Ethhdr) + ei_packet->Ip.offset();
 			// check pattern
 			if(PatternCheck(reinterpret_cast<Tcphdr*>(tcp_packet), param.pattern, header->caplen - sizeof(Ethhdr) - ei_packet->Ip.offset() )){
+				printf("OH!\n");
 				BackBlock(sd, ei_packet, header->caplen, &param);
+				ForwardBlock(sd, ei_packet, header->caplen, &param);
 				printf("%u bytes captured\n", header->caplen);
 			}
 		}
