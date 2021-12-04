@@ -74,9 +74,3 @@ void ForwardBlock(int sd, EI_packet* O_ei_packet, int len, Param* param);
 
 void BackBlock_pcap(pcap_t* pcap, EI_packet* O_ei_packet, int len, Param* param);
 void ForwardBlock_pcap(pcap_t* pcaps, EI_packet* O_ei_packet, int len, Param* param);
-
-
-
-void forwardblock(EI_packet* packet, int sd, uint32_t totlen, Param* param);
-void backwardblock(EI_packet* packet, int sd, uint32_t totlen, Param* param);
-void initBlockBuf(string redirect);
