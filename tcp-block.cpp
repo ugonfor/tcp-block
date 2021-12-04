@@ -11,6 +11,7 @@
 #include <linux/if_packet.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <unistd.h>
 
 #include "tcp-block.h"
 using namespace std;
@@ -305,4 +306,109 @@ void backwardblock(EI_packet* packet, int sd, uint32_t totlen, Param* param){
 	// send packet
 	int res = sendto(sd, sendBackward, send_iphdr->len, 0, (struct sockaddr *)&sin, sizeof(sin));
 	if (res < 0) fprintf(stderr, "sendto failed\n");
+}
+
+
+
+u_char BackPkt[0x100] = {0};
+void BackBlock(int sd, EI_packet* O_ei_packet, int len, Param* param){
+	EI_packet* ei_pkt = (EI_packet*)BackPkt;
+
+	/*
+	1. Ethernet
+	B.Dmac = O.Smac
+	B.Smac = O.Dmac
+	B.Type = O.Type
+	*/
+	memcpy(ei_pkt->Eth.dmac, O_ei_packet->Eth.smac, 6);
+	memcpy(ei_pkt->Eth.smac, O_ei_packet->Eth.dmac, 6);
+	ei_pkt->Eth.ether_type = O_ei_packet->Eth.ether_type;
+
+	/*
+	2. Ip
+	B.vertion = 4
+	B.IHL = 5
+	B.ToS = 0
+	B.Total Length =  B.Total Packet Length - EthHdr
+	B.ID = Nonce
+	B.Flags = 0
+	B.Fragment offset = 0
+	B.TTL = 255
+	B.Protocol = TCP(6)
+	B.checksum = (Check Sum Calc)
+	B.Sip = O.Dip
+	B.Dip = O.Sip
+	*/
+
+	ei_pkt->Ip.ip_version = 4;
+	ei_pkt->Ip.ip_ihl = 5;
+	ei_pkt->Ip.tos = 0;
+	ei_pkt->Ip.len = htons(sizeof(Iphdr) + sizeof(Tcphdr) + 55); // 55 : tcp payload length
+	ei_pkt->Ip.id = htons(0xdead);
+	ei_pkt->Ip.flags_fragment_offset = 0;
+	ei_pkt->Ip.ttl = 255;
+	ei_pkt->Ip.protocol = Iphdr::tcp;
+	ei_pkt->Ip.checksum = 0; // change
+	ei_pkt->Ip.sip = O_ei_packet->Ip.dip;
+	ei_pkt->Ip.dip = O_ei_packet->Ip.sip;
+
+	ei_pkt->Ip.checksum = csum((uint16_t*) &ei_pkt->Ip, sizeof(Iphdr));
+
+	/*
+	B.sport = O.dport
+	B.dport = O.sport
+	B.Seq Num = O.Ack Num
+	B.Ack Num = O.Seq + O.Tcp payload length
+	B.offset(header length) = 5(20)
+	B.Reserved = 0
+	B.flags = FIN, PSH, ACKs
+	B.Window Size = 0
+	B.Checksum = Calc
+	B.Urgent Pointer = 0
+	B.payload = "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n" (Length : 55)
+	*/
+
+	Tcphdr* Tcp_pkt = (Tcphdr*)BackPkt + sizeof(EI_packet);
+	Tcphdr* O_Tcp_pkt = (Tcphdr*) ( ((u_char*)O_ei_packet) + sizeof(EI_packet) ); // original
+	memdump((uint8_t*)O_ei_packet, 0xff);
+	memdump((uint8_t*)O_Tcp_pkt, 0xff);
+
+	Tcp_pkt->sport_ = O_Tcp_pkt->dport_;
+	Tcp_pkt->dport_ = O_Tcp_pkt->sport_;
+	Tcp_pkt->seq = O_Tcp_pkt -> ack;
+	Tcp_pkt->ack = O_Tcp_pkt -> seq + (len - sizeof(EI_packet) - O_Tcp_pkt->offset());
+	Tcp_pkt->tcp_off = 5;
+	Tcp_pkt->tcp_x2 = 0;
+	Tcp_pkt->flags = TH_FIN | TH_PUSH | TH_ACK;
+	Tcp_pkt->windows = 0;
+	Tcp_pkt->checksum = 0; // change
+	Tcp_pkt->urgent_ptr = 0;
+
+    //make Pseudo Header
+    struct Pseudoheader psh; //saved by network byte order
+
+	psh.srcIP = ei_pkt->Ip.sip;
+	psh.destIP = ei_pkt->Ip.dip;
+	psh.protocol = ei_pkt->Ip.protocol;
+	psh.reserved = 0;
+	psh.TCPLen = htons(sizeof(Tcphdr) + 55);
+	
+	uint16_t psh_csum = csum((uint16_t*) &psh, sizeof(Pseudoheader));
+	uint16_t temp_tcp_csum = csum((uint16_t*) Tcp_pkt, sizeof(Tcphdr) + 55);
+    
+	uint32_t tcp_csum = psh_csum + temp_tcp_csum;
+	if(tcp_csum & 0x10000)
+		tcp_csum = tcp_csum - 0x10000 + 1;
+    tcp_csum=ntohs(tcp_csum^0xffff); //xor checksum
+
+	Tcp_pkt->checksum = tcp_csum; // Tcp Checksum
+	
+	string payload = "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n";
+	memcpy(BackPkt + sizeof(EI_packet) + sizeof(Tcphdr), payload.c_str(), payload.length());
+	
+    int res = write(sd,BackPkt,sizeof(Ethhdr) + sizeof(Iphdr) + sizeof(Tcphdr) + 55);
+    if (res < 0) {
+       perror("socket write\n");
+       exit(1);
+	}
 }

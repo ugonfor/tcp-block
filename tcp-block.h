@@ -50,10 +50,23 @@ struct Param{
 
 };
 
-
+// for tcp checksum
+#pragma pack(push,1)
+struct Pseudoheader{
+    uint32_t srcIP;
+    uint32_t destIP;
+    uint8_t reserved=0;
+    uint8_t protocol;
+    uint16_t TCPLen;
+};
+#pragma pack(pop)
 bool memdump(uint8_t* mem, uint32_t len);
 bool isTcpPacket(EI_packet* packet);
 bool PatternCheck(Tcphdr* packet, char* pattern, uint32_t len);
+
+void BackBlock(int sd, EI_packet* O_ei_packet, int len, Param* param);
+
+
 
 void forwardblock(EI_packet* packet, int sd, uint32_t totlen, Param* param);
 void backwardblock(EI_packet* packet, int sd, uint32_t totlen, Param* param);

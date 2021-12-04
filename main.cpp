@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <linux/if_packet.h>
+#include <net/if.h>
+#include <unistd.h>
 
 #include "tcp-block.h"
 
@@ -38,28 +40,33 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	
+	// socket interface
 	// raw socket
 	int sd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW);
 	if(sd == -1){
 		fprintf(stderr, "Failed to create socket\n");
 		return -1;
 	}
+	
+	// address setting
+	struct sockaddr_ll daddr;
+	memset(&daddr, 0, sizeof(struct sockaddr_ll));
+    daddr.sll_family = AF_PACKET; // low level packet address
+    daddr.sll_protocol = htons(ETH_P_ALL); // ethernet protocol
+    daddr.sll_ifindex = if_nametoindex(param.dev_); // device setting
+    if (bind(sd, (struct sockaddr*) &daddr, sizeof(daddr)) < 0) {
+      perror("bind failed\n");
+      close(sd);
+    }
+	
+	// device setting
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), param.dev_); // device setting
+    if (setsockopt(sd, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+        perror("bind to eth1");
+    }
 
-	char httpdata[1024] = {0};
-	if (param.redirect) snprintf(httpdata, 1023, "HTTP/1.0 302 Redirect\r\nLocation: %s\r\n", param.redirect_url);
-	else				snprintf(httpdata, 1023, "HTTP/1.0 302 Redirect\r\nLocation: http://warning.or.kr\r\n");
-	initBlockBuf(string(httpdata));
-
-	/*
-	//IP_HDRINCL to tell the kernel that headers are included in the packet
-	int one = 1;
-	const int *val = &one;
-	if (setsockopt (sd, IPPROTO_IP, IP_HDRINCL, val, sizeof (one)) < 0)
-	{
-		perror("Error setting IP_HDRINCL");
-		return -1;
-	}
-	*/
 	
 	while (true) {
 		struct pcap_pkthdr* header;
@@ -76,14 +83,13 @@ int main(int argc, char* argv[]) {
 			u_char* tcp_packet = reinterpret_cast<u_char*>(ei_packet) + sizeof(Ethhdr) + ei_packet->Ip.offset();
 			// check pattern
 			if(PatternCheck(reinterpret_cast<Tcphdr*>(tcp_packet), param.pattern, header->caplen - sizeof(Ethhdr) - ei_packet->Ip.offset() )){
-				forwardblock(ei_packet, sd, header->caplen, &param);
-				backwardblock(ei_packet, sd, header->caplen, &param);
+				BackBlock(sd, ei_packet, header->caplen, &param);
 				printf("%u bytes captured\n", header->caplen);
 			}
 		}
 
 
 	}
-
+	close(sd);
 	pcap_close(pcap);
 }
